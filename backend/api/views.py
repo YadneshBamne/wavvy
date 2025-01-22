@@ -9,9 +9,25 @@ from datetime import timedelta
 from rest_framework.permissions import AllowAny
 from django.http import JsonResponse
 from phonenumbers import parse, is_valid_number, format_number, PhoneNumberFormat
+from twilio.rest import Client as cl
+import os
+from django.conf import settings
+
+def send_otp_twilio(otp, number):
+    account_sid = settings.TWILIO_ACCOUNT_SID
+    auth_token = settings.TWILIO_AUTH_TOKEN
+    client = cl(account_sid, auth_token)
+    
+    message = client.messages.create(
+        body = f"Your otp for wavvy login is {otp}",
+        from_="+16206788254",
+        to= f"{number}"
+    )
+    
+    print(message.body)
 
 class SendOTPView(APIView):
-    permission_classes = [AllowAny]  # Allow unauthenticated access
+    permission_classes = [AllowAny]
 
     def post(self, request):
         phone_number = request.data.get('phone_number')
@@ -26,6 +42,7 @@ class SendOTPView(APIView):
         # Here you would send the OTP to the user's phone number
         # For now, we'll just print it to the console
         print(f"OTP for {phone_number} is {otp.otp}")
+        
         
         return Response({'message': 'OTP sent successfully'}, status=status.HTTP_200_OK)
 

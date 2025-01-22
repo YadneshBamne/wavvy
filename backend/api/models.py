@@ -13,13 +13,15 @@ def validate_image_size(file):
         raise ValidationError("File size exceeds the 2 MB limit.")
 
 class Business(models.Model):
-    phone_number = models.CharField(max_length=15, unique=True)
+    phone_number = models.CharField(max_length=20, unique=True)
     owner_name = models.CharField(max_length=100)
     salon_name = models.CharField(max_length=100)
     owner_email = models.EmailField()
     gst = models.CharField(max_length=15, blank=True, null=True)
     salon_description = models.TextField(blank=True)
-    profile_img = models.ImageField(upload_to="profiles/", null=True, blank=True)
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+    profile_img = models.ImageField(upload_to="profiles/", null=True, blank=True, validators=[validate_image_size])
 
     def __str__(self):
         return self.salon_name
@@ -43,6 +45,7 @@ class Services(models.Model):
     duration_in_mins = models.PositiveIntegerField()
     price = models.PositiveIntegerField()
     category = models.ForeignKey(ServiceCategory, on_delete=models.CASCADE, null=True, blank=True, related_name="services")
+    service_image = models.ImageField(upload_to="services-images/", null=True, blank=True)
 
     def __str__(self):
         return self.service_name
@@ -76,7 +79,7 @@ class Client(models.Model):
 
 class TeamMember(models.Model):
     business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='business_team_members')
-    profile_img = models.ImageField(upload_to="team_members", null=True, blank=True)
+    profile_img = models.ImageField(upload_to="team-profiles/", null=True, blank=True)
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
     phone_number = models.CharField(max_length=15, unique=True)
@@ -93,6 +96,7 @@ class TeamMember(models.Model):
 class Appointment(models.Model):
     business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='business_appointments')
     services = models.ManyToManyField(Services, related_name="appointments")
+    packages = models.ManyToManyField(Packages, related_name="appointments", blank=True)
     staff = models.ForeignKey(TeamMember, on_delete=models.SET_NULL, null=True, blank=True, related_name="appointments")
     client_appointments = models.ForeignKey(Client, on_delete=models.CASCADE, related_name="client_appointments")
     appointment_date = models.DateField()
@@ -110,8 +114,7 @@ class Appointment(models.Model):
         max_length=20,
         choices=[
             ("Pending", "Pending"),
-            ("Completed", "Completed"),
-            ("Failed", "Failed")
+            ("Completed", "Completed")
         ],
         default="Pending"
     )
@@ -124,7 +127,19 @@ class Appointment(models.Model):
 
     def __str__(self):
         return f"Appointment for {self.client_appointments.client_name} on {self.appointment_date}"
-
+    
+    def total_amount(self):
+        """
+        Calculate the total amount for the appointment by summing up the prices of all services and packages.
+        """
+        # Sum of service prices
+        service_total = sum(service.price for service in self.services.all())
+        
+        # Sum of package prices
+        package_total = sum(package.package_price for package in self.packages.all())
+        
+        # Return the total amount
+        return service_total + package_total
 
 
 class OTP(models.Model):

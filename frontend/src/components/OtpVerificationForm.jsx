@@ -41,52 +41,65 @@ export function OtpVerificationForm({ onBack }) {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
+ const handleSubmit = async (e) => {
+   e.preventDefault();
+   setLoading(true);
+   setError("");
 
-    const otpCode = otp.join(""); // Combine all digits into a single OTP code
-    const formattedPhoneNumber = phoneNumber.startsWith("IN")
-      ? phoneNumber
-      : `IN${phoneNumber}`; // Ensure phone number includes the "IN" prefix
+   try {
+     // Step 1: Retrieve phone number from localStorage
+     const formattedPhoneNumber = localStorage.getItem("phoneNumberStored");
 
-    try {
-      // Step 1: Verify OTP
-      const otpResponse = await axios.post(`${APIURL}/api/verify-otp/`, {
-        phone_number: formattedPhoneNumber,
-        otp: otpCode,
-      });
+     if (!formattedPhoneNumber) {
+       setError("Phone number is missing. Please go back and try again.");
+       setLoading(false);
+       return;
+     }
 
-      if (otpResponse.data.message === "OTP verified successfully") {
-        console.log("OTP verified!");
+     // Step 2: Verify OTP
+     const otpCode = otp.join(""); // Combine all digits into a single OTP code
 
-        // Step 2: Check if business exists
-        const businessResponse = await axios.post(
-          `${APIURL}/api/check-business/`,
-          { phone_number: formattedPhoneNumber }
-        );
+     const otpResponse = await axios.post(`${APIURL}/api/verify-otp/`, {
+       phone_number: formattedPhoneNumber,
+       otp: otpCode,
+     });
 
-        if (businessResponse.data.exists) {
-          localStorage.setItem("businessId", businessResponse.data.business_id); // Save business ID
-          navigate("/dashboard"); // Redirect to dashboard
-        } else {
-          navigate("/register", {
-            state: { phone_number: formattedPhoneNumber },
-          }); // Redirect to registration
-        }
-      } else {
-        setError("Invalid OTP. Please try again.");
-      }
-    } catch (err) {
-      console.error("Error:", err.response?.data || err.message);
-      setError(
-        err.response?.data?.error || "An error occurred. Please try again."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+     if (otpResponse.data.message === "OTP verified successfully") {
+       console.log("OTP verified!");
+
+       // Step 3: Check if business exists
+       const businessResponse = await axios.post(
+         `${APIURL}/api/check-business/`,
+         { phone_number: formattedPhoneNumber }
+       );
+
+       // Handle the API response
+       const { exists, redirect, business_id } = businessResponse.data;
+
+       if (exists) {
+         // Save business ID to localStorage
+         localStorage.setItem("businessId", business_id);
+
+         // Navigate to the specified redirect URL
+         navigate(redirect);
+       } else {
+         // If the business does not exist, redirect to the registration page
+         navigate("/register", {
+           state: { phone_number: formattedPhoneNumber },
+         });
+       }
+     } else {
+       setError("Invalid OTP. Please try again.");
+     }
+   } catch (err) {
+     console.error("Error:", err.response?.data || err.message);
+     setError(
+       err.response?.data?.error || "An error occurred. Please try again."
+     );
+   } finally {
+     setLoading(false);
+   }
+ };
 
   const handleResend = async () => {
     try {

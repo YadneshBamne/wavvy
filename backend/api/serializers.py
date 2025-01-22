@@ -134,11 +134,18 @@ class AppointmentSerializer(serializers.ModelSerializer):
     staff = serializers.PrimaryKeyRelatedField(
         queryset=TeamMember.objects.all()
     )
+    total_amount = serializers.SerializerMethodField()
 
     class Meta:
         model = Appointment
         fields = '__all__'
         read_only_fields = ['business', 'client_appointments', 'staff', 'services']
+        
+    def get_total_amount(self, obj):
+        """
+        Calculate and return the total amount for the appointment.
+        """
+        return obj.total_amount()
 
     def create(self, validated_data):
         business_id = validated_data.pop('business_id')

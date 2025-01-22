@@ -1,20 +1,24 @@
+"use client";
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useToast } from "@/components/ui/use-toast"; // Import ShadCN toast hook
 import { APIURL } from "@/url.config";
 
 export function ProfileEdit({ onSave, onCancel }) {
-  const [profile, setProfile] = useState(null); // State to hold profile data
-  const [editedProfile, setEditedProfile] = useState(null); // State for editable profile
+  const { toast } = useToast(); // Initialize the ShadCN toast
+  const [profile, setProfile] = useState(null);
+  const [editedProfile, setEditedProfile] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
-  const [isSaving, setIsSaving] = useState(false); // Saving state
+  const [selectedImageFile, setSelectedImageFile] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
   const businessId = localStorage.getItem("businessId");
-  const url = `${APIURL}/api/business/${businessId}/`; // Replace with your API endpoint
+  const url = `${APIURL}/api/business/${businessId}/`;
 
-  // Prefetch the profile details
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -27,8 +31,8 @@ export function ProfileEdit({ onSave, onCancel }) {
         if (response.ok) {
           const data = await response.json();
           setProfile(data);
-          setEditedProfile(data); // Prefill form with fetched data
-          setPreviewImage(data.profile_img); // Set initial preview image
+          setEditedProfile(data);
+          setPreviewImage(data.profile_img);
         } else {
           console.error("Failed to fetch profile data");
         }
@@ -40,43 +44,73 @@ export function ProfileEdit({ onSave, onCancel }) {
     fetchProfile();
   }, [url]);
 
-  // Handle form input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setEditedProfile((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Handle profile image upload
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      setSelectedImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreviewImage(reader.result);
-        setEditedProfile((prev) => ({ ...prev, profile_img: reader.result }));
       };
       reader.readAsDataURL(file);
     }
   };
 
-  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSaving(true);
+
     try {
+      const formData = new FormData();
+      formData.append("owner_name", editedProfile.owner_name);
+      formData.append("salon_name", editedProfile.salon_name);
+      formData.append("phone_number", editedProfile.phone_number);
+      formData.append("owner_email", editedProfile.owner_email);
+      formData.append("gst", editedProfile.gst);
+      formData.append("salon_description", editedProfile.salon_description);
+
+      if (selectedImageFile) {
+        formData.append("profile_img", selectedImageFile);
+      }
+
       const response = await fetch(url, {
         method: "PUT",
         headers: {
-          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
-        body: JSON.stringify(editedProfile),
+        body: formData,
       });
 
       if (response.ok) {
         const updatedProfile = await response.json();
-        onSave(updatedProfile); // Pass updated data back to parent
+        onSave(updatedProfile);
+
+        // Show toast notification for success
+        toast({
+          title: "Profile updated successfully",
+          description: "Click below to reload the page.",
+          action: (
+            <Button
+              variant="link"
+              onClick={() => window.location.reload()} // Reload the page on button click
+            >
+              Reload
+            </Button>
+          ),
+          duration: 1, // Optional: customize duration
+        });
+
+        // Auto-reload the page after toast disappears
+        setTimeout(() => {
+          window.location.reload();
+        }, 1);
       } else {
-        console.error("Failed to update profile:", response.statusText);
+        console.error("Failed to update profile:", await response.text());
       }
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -86,7 +120,7 @@ export function ProfileEdit({ onSave, onCancel }) {
   };
 
   if (!profile) {
-    return <div>Loading...</div>; // Loading state while fetching profile
+    return <div>Loading...</div>;
   }
 
   return (
@@ -168,7 +202,11 @@ export function ProfileEdit({ onSave, onCancel }) {
         >
           Cancel
         </Button>
-        <Button type="submit" disabled={isSaving}>
+        <Button
+          className="bg-purple-600 hover:bg-purple-700"
+          type="submit"
+          disabled={isSaving}
+        >
           {isSaving ? "Saving..." : "Save Changes"}
         </Button>
       </div>

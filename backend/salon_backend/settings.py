@@ -30,6 +30,11 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+import os
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
 
 # Application definition
 
@@ -73,6 +78,7 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
+SECURE_CROSS_ORIGIN_OPENER_POLICY = None
 
 ROOT_URLCONF = "salon_backend.urls"
 
@@ -93,6 +99,13 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "salon_backend.wsgi.application"
+
+from decouple import config
+
+TWILIO_ACCOUNT_SID = config("TWILIO_ACCOUNT_SID")
+TWILIO_AUTH_TOKEN = config("TWILIO_AUTH_TOKEN")
+TWILIO_PHONE_NUMBER = config("TWILIO_PHONE_NUMBER")
+
 
 # Database
 # MongoEngine is used instead of Django's default database

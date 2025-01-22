@@ -96,6 +96,12 @@ export default function AddClientDrawer({ open, onOpenChange }) {
         body: JSON.stringify(clientData),
       });
 
+      if (response.ok) {
+        setTimeout(() => {
+          window.location.reload();
+        }, 1);
+      }
+
       if (!response.ok) {
         const errorDetails = await response.json();
         console.error("API Error:", errorDetails);

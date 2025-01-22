@@ -45,7 +45,7 @@ export default function ProfilePage() {
         ) : (
           <>
             <ProfileView profile={profile} />
-            <Button onClick={handleEdit} className="mt-4">
+            <Button className="bg-purple-600 hover:bg-purple-700 mt-4" onClick={handleEdit}>
               Edit Profile
             </Button>
           </>

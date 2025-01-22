@@ -41,22 +41,29 @@ export function InviteDrawer({ open, onOpenChange, addTeamMember }) {
     try {
       const fullName = `${data.firstName} ${data.lastName}`;
 
+      // Create a FormData object for file upload
+      const formData = new FormData();
+      formData.append("business_id", businessId);
+      formData.append("first_name", data.firstName);
+      formData.append("last_name", data.lastName);
+      formData.append("member_name", fullName);
+      formData.append("phone_number", data.phoneNumber);
+      formData.append("member_email", data.email);
+      formData.append(
+        "date_of_joining",
+        new Date().toISOString().split("T")[0]
+      ); // Current date
+      formData.append("access_type", data.accessType);
+      formData.append("is_available", true);
+
+      // Append the profile image file if it exists
+      if (data.profileImg && data.profileImg[0]) {
+        formData.append("profile_img", data.profileImg[0]);
+      }
+
       const response = await fetch(`${APIURL}/api/team-members/`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          business_id: businessId,
-          first_name: data.firstName,
-          last_name: data.lastName,
-          member_name: fullName,
-          phone_number: data.phoneNumber,
-          member_email: data.email,
-          date_of_joining: new Date().toISOString().split("T")[0], // Current date
-          access_type: data.accessType,
-          is_available: true,
-        }),
+        body: formData, // Use FormData instead of JSON
       });
 
       if (response.ok) {
@@ -65,6 +72,9 @@ export function InviteDrawer({ open, onOpenChange, addTeamMember }) {
         form.reset(); // Clear the form
         onOpenChange(false); // Close the drawer
         alert("Team member added successfully!");
+        setTimeout(() => {
+          window.location.reload();
+        }, 1);
       } else {
         alert("Failed to add team member. Please try again.");
       }
@@ -165,6 +175,25 @@ export function InviteDrawer({ open, onOpenChange, addTeamMember }) {
                       type="email"
                       placeholder="you@company.com"
                       {...field}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            {/* Add a file input for profile image upload */}
+            <FormField
+              control={form.control}
+              name="profileImg"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Profile Image</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="file"
+                      accept="image/*" // Accept only image files
+                      onChange={(e) => {
+                        field.onChange(e.target.files); // Update form value with selected file(s)
+                      }}
                     />
                   </FormControl>
                 </FormItem>

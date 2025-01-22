@@ -17,6 +17,8 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -32,6 +34,5 @@ MEDIA_ROOT = BASE_DIR / 'media'  # This is the directory where the media files w
 
 DEBUG = True
 
-if DEBUG:
-    from django.conf.urls.static import static
-    urlpatterns += static(MEDIA_URL, document_root=MEDIA_ROOT)
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

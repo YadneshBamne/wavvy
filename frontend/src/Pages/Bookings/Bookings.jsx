@@ -25,42 +25,61 @@ export function Bookings() {
   const [businessId, setBusinessId] = useState(null);
   const navigate = useNavigate();
 
-  // Fetch additional data for each appointment
+  // Fetch package details
+  const fetchPackageDetails = async (packageIds) => {
+    const packageDetails = await Promise.all(
+      packageIds.map(async (packageId) => {
+        const response = await fetch(`${APIURL}/api/packages/${packageId}/`);
+        if (!response.ok)
+          throw new Error(`Failed to fetch package ${packageId}`);
+        return response.json();
+      })
+    );
+    return packageDetails;
+  };
+
+  // Fetch detailed appointment data
   const fetchDetailedAppointmentData = async (appointments) => {
     const detailedAppointments = await Promise.all(
       appointments.map(async (appointment) => {
         try {
-          const [clientResponse, staffResponse, servicesResponses] =
-            await Promise.all([
-              fetch(
-                `${APIURL}/api/clients/${appointment.client_appointments}/`
-              ).then((res) =>
+          const [
+            clientResponse,
+            staffResponse,
+            servicesResponses,
+            packageResponses,
+          ] = await Promise.all([
+            fetch(
+              `${APIURL}/api/clients/${appointment.client_appointments}/`
+            ).then((res) =>
+              res.ok
+                ? res.json()
+                : Promise.reject("Failed to fetch client data")
+            ),
+            fetch(`${APIURL}/api/team-members/${appointment.staff}/`).then(
+              (res) =>
                 res.ok
                   ? res.json()
-                  : Promise.reject("Failed to fetch client data")
-              ),
-              fetch(`${APIURL}/api/team-members/${appointment.staff}/`).then(
-                (res) =>
+                  : Promise.reject("Failed to fetch staff data")
+            ),
+            Promise.all(
+              appointment.services.map((serviceId) =>
+                fetch(`${APIURL}/api/services/${serviceId}/`).then((res) =>
                   res.ok
                     ? res.json()
-                    : Promise.reject("Failed to fetch staff data")
-              ),
-              Promise.all(
-                appointment.services.map((serviceId) =>
-                  fetch(`${APIURL}/api/services/${serviceId}/`).then((res) =>
-                    res.ok
-                      ? res.json()
-                      : Promise.reject(`Failed to fetch service ${serviceId}`)
-                  )
+                    : Promise.reject(`Failed to fetch service ${serviceId}`)
                 )
-              ),
-            ]);
+              )
+            ),
+            fetchPackageDetails(appointment.packages || []),
+          ]);
 
           return {
             ...appointment,
             client: clientResponse,
             staff: staffResponse,
             services: servicesResponses,
+            packages: packageResponses,
           };
         } catch (err) {
           console.error("Error fetching detailed data for appointment:", err);
@@ -85,6 +104,7 @@ export function Bookings() {
       const detailedAppointments = await fetchDetailedAppointmentData(
         data.business_appointments || []
       );
+
       setAppointments(detailedAppointments);
     } catch (err) {
       setError(err.message);
@@ -94,14 +114,13 @@ export function Bookings() {
   };
 
   useEffect(() => {
-      const theMainThing = localStorage.getItem("businessId");
-      if (!theMainThing) {
-        navigate("/login");
-      }
-    }, [navigate]);
+    const theMainThing = localStorage.getItem("businessId");
+    if (!theMainThing) {
+      navigate("/login");
+    }
+  }, [navigate]);
 
   useEffect(() => {
-    // Fetch businessId from localStorage after the component mounts
     const storedBusinessId = localStorage.getItem("businessId");
     if (storedBusinessId) {
       setBusinessId(storedBusinessId);
@@ -110,9 +129,9 @@ export function Bookings() {
 
   useEffect(() => {
     if (businessId) {
-      fetchBusinessData(); // Fetch business data once businessId is available
+      fetchBusinessData();
     }
-  }, [businessId]); // Trigger the fetchBusinessData when businessId changes
+  }, [businessId]);
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this appointment?"))
@@ -142,7 +161,7 @@ export function Bookings() {
           </div>
           <div className="space-x-4">
             <Button
-              onClick={() => setIsAddModalOpen((prev) => !prev)} // Toggle drawer visibility
+              onClick={() => setIsAddModalOpen((prev) => !prev)}
               className="bg-purple-600 text-white hover:bg-purple-700 px-4 py-2 rounded-lg"
             >
               Create Appointment
@@ -167,10 +186,13 @@ export function Bookings() {
                   <TableHead>Client</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Pay Mode</TableHead>
-                  <TableHead>Service</TableHead>
+                  <TableHead>Services/Packages</TableHead>
                   <TableHead>Staff</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Time</TableHead>
+                  <TableHead>Total Amount</TableHead>
+                  <TableHead>Payment Status</TableHead> {/* New column */}
+                  <TableHead>Appointment Status</TableHead> {/* New column */}
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -185,9 +207,14 @@ export function Bookings() {
                     </TableCell>
                     <TableCell>{appointment.pay_mode}</TableCell>
                     <TableCell>
-                      {appointment.services
-                        ?.map((service) => service.service_name)
-                        .join(", ") || "No Services"}
+                      {[
+                        ...(appointment.services || []).map(
+                          (service) => service.service_name
+                        ),
+                        ...(appointment.packages || []).map(
+                          (pkg) => pkg.package_name
+                        ),
+                      ].join(", ") || "No Services or Packages"}
                     </TableCell>
                     <TableCell>
                       {appointment.staff
@@ -196,6 +223,11 @@ export function Bookings() {
                     </TableCell>
                     <TableCell>{appointment.appointment_date}</TableCell>
                     <TableCell>{appointment.appointment_time}</TableCell>
+                    <TableCell>₹{appointment.total_amount}</TableCell>
+                    <TableCell>{appointment.payment_status}</TableCell>{" "}
+                    {/* Payment Status */}
+                    <TableCell>{appointment.status}</TableCell>{" "}
+                    {/* Appointment Status */}
                     <TableCell className="flex space-x-2">
                       <button
                         className="text-blue-500 hover:underline"
@@ -224,10 +256,10 @@ export function Bookings() {
 
       {/* Add Booking Modal */}
       <CreateAppointment
-        open={isAddModalOpen} // Control visibility of the drawer
-        onClose={() => setIsAddModalOpen(false)} // Close the drawer
-        onCreate={fetchBusinessData} // Callback to refresh appointments list
-        businessId={businessId} // Pass the business ID here
+        open={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onCreate={fetchBusinessData}
+        businessId={businessId}
       />
 
       <EditBookingDrawer

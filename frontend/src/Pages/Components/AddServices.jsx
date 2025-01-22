@@ -37,6 +37,7 @@ export default function AddServiceDrawer({
       durationInMins: "",
       price: "",
       categoryId: "",
+      serviceImage: null, // Add serviceImage field for file upload
     },
   });
 
@@ -46,9 +47,7 @@ export default function AddServiceDrawer({
     // Fetch categories for dropdown
     const fetchCategories = async () => {
       try {
-        const response = await fetch(
-          `${APIURL}/api/business/${businessId}`
-        );
+        const response = await fetch(`${APIURL}/api/business/${businessId}`);
         if (response.ok) {
           const data = await response.json();
           setCategories(data.business_categories || []);
@@ -66,22 +65,24 @@ export default function AddServiceDrawer({
   }, [businessId]);
 
   const onSubmit = async (data) => {
-    const payload = {
-      business_id: businessId,
-      category_id: data.categoryId,
-      service_name: data.serviceName,
-      service_type: data.serviceType,
-      duration_in_mins: parseInt(data.durationInMins),
-      price: parseFloat(data.price),
-    };
+    // Create a FormData object for file upload
+    const formData = new FormData();
+    formData.append("business_id", businessId);
+    formData.append("category_id", data.categoryId);
+    formData.append("service_name", data.serviceName);
+    formData.append("service_type", data.serviceType);
+    formData.append("duration_in_mins", parseInt(data.durationInMins));
+    formData.append("price", parseFloat(data.price));
+
+    // Append the service image file if it exists
+    if (data.serviceImage && data.serviceImage[0]) {
+      formData.append("service_image", data.serviceImage[0]);
+    }
 
     try {
       const response = await fetch(`${APIURL}/api/services/`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
+        body: formData, // Use FormData instead of JSON
       });
 
       if (response.ok) {
@@ -127,10 +128,7 @@ export default function AddServiceDrawer({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Service Type</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
+                  <Select value={field.value} onValueChange={field.onChange}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select service type" />
@@ -188,23 +186,44 @@ export default function AddServiceDrawer({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Category</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
+                  <Select value={field.value} onValueChange={field.onChange}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent className="text-black">
                       {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
+                        <SelectItem
+                          className="text-black"
+                          key={category.id}
+                          value={category.id}
+                        >
                           {category.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                </FormItem>
+              )}
+            />
+
+            {/* Add a file input for service image upload */}
+            <FormField
+              control={form.control}
+              name="serviceImage"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Service Image</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="file"
+                      accept="image/*" // Accept only image files
+                      onChange={(e) => {
+                        field.onChange(e.target.files); // Update form value with selected file(s)
+                      }}
+                    />
+                  </FormControl>
                 </FormItem>
               )}
             />

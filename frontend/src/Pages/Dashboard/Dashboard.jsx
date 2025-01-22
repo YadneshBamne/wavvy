@@ -143,10 +143,15 @@ const Dashboard = () => {
   return (
     <>
       <Navbar />
-      <div className="p-6 space-y-6">
+      <div className="p-9 space-y-6 ">
         {/* Statistics Section */}
+        <span className="text-4xl font-semibold">
+          Hello,
+          <br /> {businessData?.salon_name}
+        </span>
         <div className="grid grid-cols-4 gap-5">
           {/* Active Appointments */}
+
           <Card>
             <CardHeader>
               <CardTitle className="text-lg font-semibold">
@@ -211,7 +216,7 @@ const Dashboard = () => {
           </Card>
 
           {/* Gross & Net Sales Chart */}
-          <Card className="col-span-3">
+          {/* <Card className="col-span-3">
             <CardHeader>
               <CardTitle>Gross & Net Sales</CardTitle>
             </CardHeader>
@@ -220,7 +225,7 @@ const Dashboard = () => {
                 <Line data={chartData} options={chartOptions} />
               </div>
             </CardContent>
-          </Card>
+          </Card> */}
 
           {/* Business Services */}
           {businessData?.business_services?.map((service) => (
@@ -228,9 +233,9 @@ const Dashboard = () => {
               <CardHeader></CardHeader>
               <CardContent>
                 <img
-                  src={image1} // Replace with dynamic image if available
+                  src={service.service_image || image1} // Replace with dynamic image if available
                   alt={service.service_name}
-                  className="rounded-md"
+                  className="rounded-md h-40 w-120"
                 />
                 <p className="mt-3 text-lg font-semibold">
                   {service.service_name}
@@ -254,11 +259,14 @@ const Dashboard = () => {
                   key={member.id}
                   className="flex flex-col items-center text-center shadow-md"
                 >
-                  <Avatar className="w-15 h-15 mb-6 mt-4">
+                  <Avatar className="w-10 h-10 mb-6 mt-4">
                     <AvatarImage
-                      src={member.profile_img || avatar1} // Fallback to a default avatar if no image is available
+                      src={member.profile_img} // Fallback to a default avatar if no image is available
                       alt={`${member.first_name} ${member.last_name}`}
                     />
+                    <AvatarFallback>
+                      {member.first_name.charAt(0)}
+                    </AvatarFallback>
                   </Avatar>
                   <p className="text-sm p-2 font-medium text-gray-800">
                     {`${member.first_name} ${member.last_name}`}
@@ -314,7 +322,7 @@ const Dashboard = () => {
                         <div className="flex items-center space-x-4">
                           <Avatar>
                             <AvatarImage
-                              src={avatar1} // Use a default avatar or fetch from API if available
+                              src={teamMember.profile_img}
                               alt={teamMemberName}
                             />
                             <AvatarFallback>

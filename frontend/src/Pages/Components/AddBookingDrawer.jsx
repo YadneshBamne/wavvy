@@ -14,13 +14,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { APIURL } from "@/url.config";
 
 const CreateAppointment = ({ open, onClose, onCreate, businessId }) => {
   const [services, setServices] = useState([]);
   const [staff, setStaff] = useState([]);
   const [clients, setClients] = useState([]);
+  const [packages, setPackages] = useState([]); // State for packages
   const [formData, setFormData] = useState({
     services: [],
+    packages: [], // Added packages to the form data
     staff: "",
     client_appointments: "",
     appointment_date: "",
@@ -44,12 +47,11 @@ const CreateAppointment = ({ open, onClose, onCreate, businessId }) => {
 
   const fetchBusinessData = async () => {
     try {
-      const response = await fetch(
-        `${APIURL}/api/business/${businessId}/`
-      );
+      const response = await fetch(`${APIURL}/api/business/${businessId}/`);
       const data = await response.json();
 
       setServices(data.business_services || []);
+      setPackages(data.business_packages || []); // Fetch packages from API
       setStaff(data.business_team_members || []);
       setClients(data.clients || []);
     } catch (err) {
@@ -62,6 +64,11 @@ const CreateAppointment = ({ open, onClose, onCreate, businessId }) => {
   };
 
   const handleSubmit = async () => {
+    if (formData.services.length === 0 && formData.packages.length === 0) {
+      alert("Please select at least one service or package.");
+      return;
+    }
+
     try {
       const response = await fetch(`${APIURL}/api/appointments/`, {
         method: "POST",
@@ -92,15 +99,20 @@ const CreateAppointment = ({ open, onClose, onCreate, businessId }) => {
           </div>
         </DialogHeader>
         <div className="space-y-6 py-4">
+          {/* Services Dropdown */}
           <div className="space-y-2">
             <label>Service</label>
             <Select
-              onValueChange={(value) => handleInputChange("services", [value])}
+              onValueChange={(value) =>
+                handleInputChange("services", value ? [value] : [])
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select service" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value={null}>None</SelectItem>{" "}
+                {/* Option for None */}
                 {services.map((service) => (
                   <SelectItem key={service.id} value={service.id}>
                     {service.service_name}
@@ -109,6 +121,31 @@ const CreateAppointment = ({ open, onClose, onCreate, businessId }) => {
               </SelectContent>
             </Select>
           </div>
+
+          {/* Packages Dropdown */}
+          <div className="space-y-2">
+            <label>Package</label>
+            <Select
+              onValueChange={(value) =>
+                handleInputChange("packages", value ? [value] : [])
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select package" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={null}>None</SelectItem>{" "}
+                {/* Option for None */}
+                {packages.map((pkg) => (
+                  <SelectItem key={pkg.id} value={pkg.id}>
+                    {pkg.package_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Staff Dropdown */}
           <div className="space-y-2">
             <label>Assign Staff</label>
             <Select
@@ -126,6 +163,8 @@ const CreateAppointment = ({ open, onClose, onCreate, businessId }) => {
               </SelectContent>
             </Select>
           </div>
+
+          {/* Clients Dropdown */}
           <div className="space-y-2">
             <label>Client</label>
             <Select
@@ -145,6 +184,8 @@ const CreateAppointment = ({ open, onClose, onCreate, businessId }) => {
               </SelectContent>
             </Select>
           </div>
+
+          {/* Date and Time */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label>Date</label>
@@ -165,6 +206,8 @@ const CreateAppointment = ({ open, onClose, onCreate, businessId }) => {
               />
             </div>
           </div>
+
+          {/* Pay Mode */}
           <div className="space-y-2">
             <label>Pay Mode</label>
             <Select
@@ -181,6 +224,8 @@ const CreateAppointment = ({ open, onClose, onCreate, businessId }) => {
             </Select>
           </div>
         </div>
+
+        {/* Submit Button */}
         <div className="flex justify-end">
           <Button className="bg-purple-600" onClick={handleSubmit}>
             Create Appointment

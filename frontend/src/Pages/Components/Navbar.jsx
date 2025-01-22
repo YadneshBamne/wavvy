@@ -44,7 +44,8 @@ export function Navbar() {
           const data = await response.json();
           setBusinessData({
             businessName: data.salon_name, // Mapping salon_name to businessName
-            ownerName: data.owner_name, // Mapping owner_name to ownerName
+            ownerName: data.owner_name,
+            profileImage: data.profile_img, // Mapping owner_name to ownerName
           });
         } else {
           console.error("Failed to fetch business info");
@@ -145,7 +146,7 @@ export function Navbar() {
           <DropdownMenuTrigger asChild>
             <div className="flex items-center cursor-pointer space-x-2">
               <Avatar className="w-10 h-10">
-                <AvatarFallback>{businessData.ownerName.charAt(0)}</AvatarFallback>
+                <AvatarImage src={businessData.profileImage} alt={businessData.ownerName} />
               </Avatar>
               <span className="text-sm font-medium">{businessData.ownerName}</span>
               <ChevronDown className="w-4 h-4 text-gray-500" />

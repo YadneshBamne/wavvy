@@ -32,7 +32,7 @@ export function ProfileView() {
 
   // Show a loading state while data is being fetched
   if (!profile) {
-    return <div>Loading...</div>;
+    return <div>Profile Loading...</div>;
   }
 
   return (
@@ -46,8 +46,8 @@ export function ProfileView() {
           <AvatarFallback>{profile.owner_name.charAt(0)}</AvatarFallback>
         </Avatar>
         <div>
-          <h2 className="text-2xl font-bold">{profile.owner_name}</h2>
-          <p className="text-muted-foreground">{profile.salon_name}</p>
+          <h2 className="text-2xl font-bold">{profile.salon_name}</h2>
+          <p className="text-muted-foreground">{profile.owner_name}</p>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">

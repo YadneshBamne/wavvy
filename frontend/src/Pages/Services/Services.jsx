@@ -1,27 +1,36 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Navbar } from "../Components/Navbar";
 import AddServiceDrawer from "../Components/AddServices";
-import { Link } from "react-router-dom";
+import EditServiceDrawer from "../Components/EditServiceDrawer";
 import AddCategoryDrawer from "../Components/AddCategory";
 import AddPackageDrawer from "../Components/AddPackages";
 import { APIURL } from "@/url.config";
+import { useNavigate } from "react-router-dom";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { EllipsisVertical } from "lucide-react";
 
 export default function Services() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const [isPackageDrawerOpen, setIsPackageDrawerOpen] = useState(false);
   const [isCategoryDrawerOpen, setIsCategoryDrawerOpen] = useState(false);
   const [services, setServices] = useState([]);
   const [packages, setPackages] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [selectedService, setSelectedService] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(0);
-  const toggleDrawer = () => {
-    setIsDrawerOpen(!isDrawerOpen);
-  };
-
+  const navigate = useNavigate();
   const businessId = localStorage.getItem("businessId");
+
+  if (!businessId) {
+    navigate("/login");
+  }
 
   const handleServiceAdded = (newService) => {
     setServices((prevServices) => [...prevServices, newService]);
@@ -38,9 +47,7 @@ export default function Services() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch(
-          `${APIURL}/api/business/${businessId}`
-        );
+        const response = await fetch(`${APIURL}/api/business/${businessId}`);
         if (!response.ok) {
           throw new Error(`HTTP error! Status: ${response.status}`);
         }
@@ -63,9 +70,7 @@ export default function Services() {
     setSelectedCategory(categoryId);
     if (categoryId === 0) {
       // Show all services
-      const response = await fetch(
-        `${APIURL}/api/business/${businessId}`
-      );
+      const response = await fetch(`${APIURL}/api/business/${businessId}`);
       const data = await response.json();
       setServices(data.business_services || []);
     } else {
@@ -83,6 +88,46 @@ export default function Services() {
         console.error("Error fetching services by category:", error);
       }
     }
+  };
+
+  const handleDelete = async (serviceId) => {
+    try {
+      const response = await fetch(`${APIURL}/api/services/${serviceId}/`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
+      });
+
+      if (response.ok) {
+        setServices((prevServices) =>
+          prevServices.filter((service) => service.id !== serviceId)
+        );
+        alert("Service deleted successfully!");
+      } else {
+        const errorData = await response.json();
+        alert(
+          `Failed to delete service: ${errorData.message || "Unknown error"}`
+        );
+      }
+    } catch (error) {
+      console.error("Error deleting service:", error);
+      alert("An error occurred while deleting the service.");
+    }
+  };
+
+  const handleEdit = (service) => {
+    setSelectedService(service);
+    setIsEditDrawerOpen(true);
+  };
+
+  const handleServiceUpdated = (updatedService) => {
+    setServices((prevServices) =>
+      prevServices.map((service) =>
+        service.id === updatedService.id ? updatedService : service
+      )
+    );
   };
 
   return (
@@ -106,27 +151,6 @@ export default function Services() {
             </Button>
           </div>
         </div>
-
-        <div className="flex flex-row space-x-4 outline outline-1 outline-gray-200 rounded-md px-2">
-          <div className="bg-white rounded-md w-full flex items-center space-x-4 p-2">
-            <Input
-              type="text"
-              placeholder="Search"
-              className="flex-grow p-1 rounded-md"
-            />
-            <Input
-              type="date"
-              placeholder="Month to date"
-              className="flex-grow p-1 rounded-md"
-            />
-            <Input
-              type="text"
-              placeholder="Filters"
-              className="flex-grow p-1 rounded-md"
-            />
-          </div>
-        </div>
-
         <div className="flex mt-10">
           {/* Sidebar */}
           <div className="w-1/4 p-4 bg-gray-100">
@@ -148,12 +172,12 @@ export default function Services() {
                   </li>
                 ))}
                 <li>
-                  <Link
-                    className="pl-4 underline bg-white text-black pt-auto"
+                  <Button
+                    variant="ghost"
                     onClick={() => setIsCategoryDrawerOpen(true)}
                   >
-                    Add Catgories
-                  </Link>
+                    Add Categories
+                  </Button>
                 </li>
               </ul>
             </div>
@@ -173,12 +197,12 @@ export default function Services() {
                   </li>
                 ))}
                 <li>
-                  <Link
-                    className="pt-auto pl-4 underline text-black"
+                  <Button
+                    variant="ghost"
                     onClick={() => setIsPackageDrawerOpen(true)}
                   >
                     Add Packages
-                  </Link>
+                  </Button>
                 </li>
               </ul>
             </div>
@@ -203,18 +227,50 @@ export default function Services() {
                       {service.duration_in_mins} mins
                     </p>
                   </div>
-                  <p className="text-lg font-semibold">₹{service.price}</p>
+                  <p className="text-lg font-semibold ml-auto p-4">
+                    ₹{service.price}
+                  </p>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline">
+                        <EllipsisVertical
+                          size="20"
+                          className="cursor-pointer"
+                        />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="grid gap-4 w-40 mt-2 drop-shadow-2xl">
+                      <Button
+                        variant="outline"
+                        onClick={() => handleEdit(service)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        onClick={() => handleDelete(service.id)}
+                      >
+                        Delete
+                      </Button>
+                    </PopoverContent>
+                  </Popover>
                 </Card>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Drawer for Adding Items */}
+        {/* Drawers */}
         <AddServiceDrawer
           open={isDrawerOpen}
           onOpenChange={setIsDrawerOpen}
           onServiceAdded={handleServiceAdded}
+        />
+        <EditServiceDrawer
+          open={isEditDrawerOpen}
+          onOpenChange={setIsEditDrawerOpen}
+          service={selectedService}
+          onServiceUpdated={handleServiceUpdated}
         />
         <AddCategoryDrawer
           open={isCategoryDrawerOpen}

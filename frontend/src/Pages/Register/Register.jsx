@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom"; // For navigation after success
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import logo from "../../assets/logo.svg";
@@ -12,24 +12,66 @@ export function Register() {
   const [email, setEmail] = useState("");
   const [gst, setGst] = useState("");
   const [description, setDescription] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState(""); // State for phone number
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [profileImg, setProfileImg] = useState(null);
+  const [latitude, setLatitude] = useState(null);
+  const [longitude, setLongitude] = useState(null);
+  const [locationOption, setLocationOption] = useState(""); // Dropdown value
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const navigate = useNavigate();
+
+  // Predefined location options
+  const locationOptions = [
+    { label: "Use My Current Location", latitude: null, longitude: null },
+    { label: "Mumbai, India", latitude: 19.076, longitude: 72.8777 },
+    { label: "Delhi, India", latitude: 28.7041, longitude: 77.1025 },
+    { label: "Bangalore, India", latitude: 12.9716, longitude: 77.5946 },
+  ];
 
   // Fetch phone number from localStorage
   useEffect(() => {
     const storedPhoneNumber = localStorage.getItem("phoneNumberStored");
     if (storedPhoneNumber) {
-      setPhoneNumber(storedPhoneNumber); // Set phone number state from localStorage
+      setPhoneNumber(storedPhoneNumber);
     } else {
       setError("No phone number found in localStorage. Please log in again.");
     }
   }, []);
 
+  // Fetch current location if "Use My Current Location" is selected
+  useEffect(() => {
+    if (locationOption === "Use My Current Location" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLatitude(position.coords.latitude);
+          setLongitude(position.coords.longitude);
+          console.log("Current location fetched:", position.coords);
+        },
+        (error) => {
+          console.error("Error fetching location:", error.message);
+          setError("Failed to fetch location. Please allow location access.");
+        }
+      );
+    } else {
+      // Find the selected option in predefined locations
+      const selectedLocation = locationOptions.find(
+        (option) => option.label === locationOption
+      );
+      if (selectedLocation) {
+        setLatitude(selectedLocation.latitude);
+        setLongitude(selectedLocation.longitude);
+      }
+    }
+  }, [locationOption]);
+
   const handleSubmit = async (event) => {
     event.preventDefault();
+
+    if (!latitude || !longitude) {
+      setError("Please select a valid location.");
+      return;
+    }
 
     const formData = new FormData();
     formData.append("owner_name", ownerName);
@@ -38,6 +80,8 @@ export function Register() {
     formData.append("phone_number", phoneNumber);
     formData.append("gst", gst);
     formData.append("salon_description", description);
+    formData.append("latitude", latitude);
+    formData.append("longitude", longitude);
     if (profileImg) {
       formData.append("profile_img", profileImg);
     }
@@ -60,7 +104,6 @@ export function Register() {
       const responseData = await response.json();
       console.log("Business created:", responseData);
 
-      // Store business ID in localStorage
       if (responseData.id) {
         localStorage.setItem("businessId", responseData.id);
       }
@@ -68,7 +111,6 @@ export function Register() {
       setSuccess("Business created successfully!");
       setError("");
 
-      // Redirect to dashboard
       navigate("/dashboard");
     } catch (error) {
       console.error("Error:", error.message);
@@ -134,8 +176,23 @@ export function Register() {
             placeholder="Phone number"
             className="w-full"
             value={phoneNumber}
-            readOnly // Makes the field read-only
+            readOnly
           />
+          <div>
+            <label className="my-10">Select Location</label>
+            <select
+              className="w-full px-3 py-2 border rounded-md"
+              value={locationOption}
+              onChange={(e) => setLocationOption(e.target.value)}
+            >
+              <option value="">Select a location</option>
+              {locationOptions.map((option) => (
+                <option key={option.label} value={option.label}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
           <textarea
             placeholder="Enter a description..."
             className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
